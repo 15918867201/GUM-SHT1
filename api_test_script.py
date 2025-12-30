@@ -162,6 +162,9 @@ class APITester:
         self.test_different_time_ranges()
         self.test_data_format()
         self.test_real_time_data()
+        self.test_get_post_consistency()
+        self.test_response_structure()
+        self.test_empty_response_handling()
         
     def run_boundary_tests(self):
         print("\n=== Running Boundary Tests ===")
@@ -189,6 +192,8 @@ class APITester:
         print("\n=== Running Performance Tests ===")
         self.test_response_time_benchmark()
         self.test_concurrent_requests(self.config["concurrent_users"])
+        self.test_long_time_range_performance()
+        self.test_incremental_load_performance()
         
     def run_security_tests(self):
         print("\n=== Running Security Tests ===")
@@ -297,6 +302,88 @@ class APITester:
             is_valid, result = self.validate_response(response)
             if is_valid:
                 self.log_test_result(test_name, "PASS", 200, response.status_code, "Real-time data request succeeded", response_time)
+            else:
+                self.log_test_result(test_name, "FAIL", 200, response.status_code if response else "None", result, response_time)
+        except Exception as e:
+            self.log_test_result(test_name, "ERROR", 200, "None", f"Exception: {str(e)}")
+
+    def test_get_post_consistency(self):
+        test_name = "GET/POST Consistency Test"
+        try:
+            # Test that GET and POST return the same results for the same parameters
+            start_ts, end_ts = self.generate_timestamp_range(24)
+            payload = {"start_datetime": start_ts, "end_datetime": end_ts}
+            
+            # Get POST response
+            post_response, post_time = self.make_api_request(payload, method="POST")
+            # Get GET response
+            get_response, get_time = self.make_api_request(payload, method="GET")
+            
+            if post_response and get_response:
+                if post_response.status_code == 200 and get_response.status_code == 200:
+                    post_data = post_response.json()
+                    get_data = get_response.json()
+                    
+                    if post_data == get_data:
+                        self.log_test_result(test_name, "PASS", "Same response", "Same response", "GET and POST return identical results", (post_time + get_time)/2)
+                    else:
+                        self.log_test_result(test_name, "FAIL", "Same response", "Different responses", "GET and POST should return the same results", (post_time + get_time)/2)
+                else:
+                    self.log_test_result(test_name, "FAIL", 200, f"POST: {post_response.status_code}, GET: {get_response.status_code}", "Both methods should succeed", (post_time + get_time)/2)
+            else:
+                self.log_test_result(test_name, "FAIL", "Success", "Request failed", "One or both requests failed")
+        except Exception as e:
+            self.log_test_result(test_name, "ERROR", 200, "None", f"Exception: {str(e)}")
+
+    def test_response_structure(self):
+        test_name = "Response Structure Test"
+        try:
+            start_ts, end_ts = self.generate_timestamp_range(24)
+            payload = {"start_datetime": start_ts, "end_datetime": end_ts}
+            response, response_time = self.make_api_request(payload)
+            
+            is_valid, result = self.validate_response(response)
+            if is_valid and isinstance(result, dict):
+                # Check if response has expected structure
+                if "rows" in result:
+                    if isinstance(result["rows"], list):
+                        self.log_test_result(f"{test_name} - rows", "PASS", "List", type(result["rows"]).__name__, "Response contains valid rows list", response_time)
+                    else:
+                        self.log_test_result(f"{test_name} - rows", "FAIL", "List", type(result["rows"]).__name__, "rows should be a list", response_time)
+                else:
+                    self.log_test_result(f"{test_name} - rows", "FAIL", "Exists", "Missing", "Response should contain rows field", response_time)
+                    
+                if "total" in result:
+                    if isinstance(result["total"], (int, float)):
+                        self.log_test_result(f"{test_name} - total", "PASS", "Number", type(result["total"]).__name__, "Response contains valid total count", response_time)
+                    else:
+                        self.log_test_result(f"{test_name} - total", "FAIL", "Number", type(result["total"]).__name__, "total should be a number", response_time)
+                else:
+                    self.log_test_result(f"{test_name} - total", "FAIL", "Exists", "Missing", "Response should contain total field", response_time)
+            else:
+                self.log_test_result(test_name, "FAIL", "Valid JSON dict", "Invalid response", "Response should be a valid JSON dictionary", response_time)
+        except Exception as e:
+            self.log_test_result(test_name, "ERROR", 200, "None", f"Exception: {str(e)}")
+
+    def test_empty_response_handling(self):
+        test_name = "Empty Response Handling Test"
+        try:
+            # Test with a time range that should return no data
+            end_ts = int(time.time())
+            start_ts = end_ts + 3600  # Future time range
+            payload = {"start_datetime": start_ts, "end_datetime": end_ts}
+            response, response_time = self.make_api_request(payload)
+            
+            is_valid, result = self.validate_response(response)
+            if is_valid:
+                # Check that empty response is handled gracefully
+                if "rows" in result and isinstance(result["rows"], list):
+                    if len(result["rows"]) == 0:
+                        self.log_test_result(test_name, "PASS", "Empty list", "Empty list", "Empty response handled correctly", response_time)
+                    else:
+                        self.log_test_result(test_name, "FAIL", "Empty list", f"List with {len(result['rows'])} items", "Future time range should return empty data", response_time)
+                else:
+                    self.log_test_result(test_name, "PASS", "Valid response", "Valid response", "Response received for empty data range", response_time)
             else:
                 self.log_test_result(test_name, "FAIL", 200, response.status_code if response else "None", result, response_time)
         except Exception as e:
@@ -473,12 +560,12 @@ class APITester:
             start_ts, end_ts = self.generate_timestamp_range(24)
             payload = {"start_datetime": start_ts, "end_datetime": end_ts}
             
-            # Test GET method (should fail)
+            # Test GET method (should now pass since we support it)
             response, response_time = self.make_api_request(payload, method="GET")
-            if response.status_code != 200:
-                self.log_test_result(f"{test_name} (GET)", "PASS", "Error", response.status_code, "Correctly rejected GET method", response_time)
+            if response.status_code == 200:
+                self.log_test_result(f"{test_name} (GET)", "PASS", 200, response.status_code, "Correctly supported GET method", response_time)
             else:
-                self.log_test_result(f"{test_name} (GET)", "FAIL", "Error", response.status_code, "Should reject GET method", response_time)
+                self.log_test_result(f"{test_name} (GET)", "FAIL", 200, response.status_code, "Should support GET method", response_time)
             
             # Test PUT method (should fail)
             try:
@@ -489,6 +576,16 @@ class APITester:
                     self.log_test_result(f"{test_name} (PUT)", "FAIL", "Error", response.status_code, "Should reject PUT method")
             except Exception as e:
                 self.log_test_result(f"{test_name} (PUT)", "PASS", "Error", "Error", "Correctly rejected PUT method")
+            
+            # Test DELETE method (should fail)
+            try:
+                response = requests.delete(self.api_url, json=payload, timeout=10)
+                if response.status_code != 200:
+                    self.log_test_result(f"{test_name} (DELETE)", "PASS", "Error", response.status_code, "Correctly rejected DELETE method")
+                else:
+                    self.log_test_result(f"{test_name} (DELETE)", "FAIL", "Error", response.status_code, "Should reject DELETE method")
+            except Exception as e:
+                self.log_test_result(f"{test_name} (DELETE)", "PASS", "Error", "Error", "Correctly rejected DELETE method")
                 
         except Exception as e:
             self.log_test_result(test_name, "ERROR", 200, "None", f"Exception: {str(e)}")
@@ -641,6 +738,69 @@ class APITester:
             else:
                 self.log_test_result(test_name, "FAIL", concurrent_users, 0, "No successful concurrent responses")
                 
+        except Exception as e:
+            self.log_test_result(test_name, "ERROR", 200, "None", f"Exception: {str(e)}")
+
+    def test_long_time_range_performance(self):
+        test_name = "Long Time Range Performance Test"
+        try:
+            # Test with different long time ranges to identify performance degradation
+            time_ranges = [24, 72, 168, 336]  # 1天, 3天, 1周, 2周
+            
+            for hours in time_ranges:
+                range_test_name = f"{test_name} ({hours}h)"
+                start_ts, end_ts = self.generate_timestamp_range(hours)
+                payload = {"start_datetime": start_ts, "end_datetime": end_ts}
+                
+                # Increase timeout for longer ranges
+                timeout = 60 if hours > 72 else 30
+                
+                response, response_time = self.make_api_request(payload, timeout=timeout)
+                
+                if response:
+                    if response.status_code == 200:
+                        self.log_test_result(range_test_name, "PASS", 200, response.status_code, f"Long range {hours}h succeeded", response_time)
+                        
+                        # Check if response contains data
+                        try:
+                            data = response.json()
+                            if "rows" in data and isinstance(data["rows"], list):
+                                print(f"  Returned {len(data['rows'])} rows")
+                        except:
+                            pass
+                    elif response.status_code == 408:
+                        self.log_test_result(range_test_name, "FAIL", 200, response.status_code, f"Long range {hours}h timed out", response_time)
+                    else:
+                        self.log_test_result(range_test_name, "FAIL", 200, response.status_code, f"Long range {hours}h failed", response_time)
+                else:
+                    self.log_test_result(range_test_name, "FAIL", 200, "None", f"Long range {hours}h request failed", response_time)
+                    
+        except Exception as e:
+            self.log_test_result(test_name, "ERROR", 200, "None", f"Exception: {str(e)}")
+
+    def test_incremental_load_performance(self):
+        test_name = "Incremental Load Performance Test"
+        try:
+            # Test how response time scales with increasing data ranges
+            base_ts = int(time.time())
+            
+            for multiplier in [1, 2, 4, 8, 16]:
+                hours = 24 * multiplier  # 1天, 2天, 4天, 8天, 16天
+                range_test_name = f"{test_name} ({hours}h)"
+                start_ts = base_ts - (hours * 3600)
+                end_ts = base_ts
+                payload = {"start_datetime": start_ts, "end_datetime": end_ts}
+                
+                # Increase timeout based on range
+                timeout = 10 + (multiplier * 5)
+                
+                response, response_time = self.make_api_request(payload, timeout=timeout)
+                
+                if response and response.status_code == 200:
+                    self.log_test_result(range_test_name, "PASS", 200, response.status_code, f"Incremental range {hours}h succeeded", response_time)
+                else:
+                    self.log_test_result(range_test_name, "FAIL", 200, response.status_code if response else "None", f"Incremental range {hours}h failed", response_time)
+                    
         except Exception as e:
             self.log_test_result(test_name, "ERROR", 200, "None", f"Exception: {str(e)}")
     

@@ -9,10 +9,19 @@ app = Flask(__name__)
 def enforce_https():
     # 在生产环境中启用HTTPS强制重定向
     # 检查是否在生产环境（通过FLASK_ENV环境变量或DEBUG模式）
-    if not app.debug and not request.is_secure:
-        # 检查是否有反向代理设置的X-Forwarded-Proto头
+    if not app.debug:
+        # 优先检查反向代理设置的X-Forwarded-Proto头（对于生产环境的反向代理）
         proto = request.headers.get('X-Forwarded-Proto')
-        if proto == 'http':
+        
+        # 确定当前使用的协议
+        if proto:
+            is_secure = proto == 'https'
+        else:
+            # 如果没有代理头，使用原始请求的协议
+            is_secure = request.is_secure
+        
+        # 如果不是HTTPS，重定向到HTTPS
+        if not is_secure:
             # 构建HTTPS URL
             url = request.url.replace('http://', 'https://')
             return redirect(url, code=301)
@@ -22,15 +31,18 @@ def enforce_https():
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, ngrok-skip-browser-warning'
     response.headers['Access-Control-Max-Age'] = '86400'  # 24小时
     return response
 
+# 全局处理OPTIONS请求
+@app.route('/api/huacore.forms/documentapi/getvalue', methods=['OPTIONS'])
+def handle_options():
+    return '', 200
+
 # 代理API请求
-@app.route('/api/huacore.forms/documentapi/getvalue', methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/api/huacore.forms/documentapi/getvalue', methods=['GET', 'POST'])
 def proxy_api():
-    if request.method == 'OPTIONS':
-        return '', 200
     
     try:
         # 内部API服务器地址
@@ -84,14 +96,18 @@ def proxy_api():
         
         # 转发请求到内部API服务器，设置超时时间
         try:
-            # 根据时间范围调整超时时间
+            # 根据时间范围动态调整超时时间
             time_range_hours = (end_datetime - start_datetime) / 3600
             if time_range_hours <= 24:
-                timeout = 10
+                timeout = 15  # 1小时-24小时：15秒超时
             elif time_range_hours <= 72:
-                timeout = 30
+                timeout = 45  # 24小时-3天：45秒超时
+            elif time_range_hours <= 168:
+                timeout = 90  # 3天-1周：90秒超时
+            elif time_range_hours <= 336:
+                timeout = 120  # 1周-2周：120秒超时
             else:
-                timeout = 60
+                timeout = 180  # 2周以上：3分钟超时
                 
             response = requests.post(internal_api_url, json=cleaned_data, timeout=timeout)
             
