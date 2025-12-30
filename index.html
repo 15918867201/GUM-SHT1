@@ -576,8 +576,17 @@
         // 处理API响应数据
         function processApiResponse(json) {
             console.log('API response data:', json);
-            console.log('Data length:', json.length);
+            console.log('Data type:', typeof json);
             
+            // 确保json是数组
+            if (!Array.isArray(json)) {
+                console.error('Expected array but got:', json);
+                document.getElementById("msgbox").innerText = 'Error: Invalid data format';
+                updateDowntimeTable([]);
+                return;
+            }
+            
+            console.log('Data length:', json.length);
             document.getElementById("msgbox").innerText = json.length;
             
             // 如果没有数据，保持当前图表不变
@@ -588,19 +597,45 @@
                 return;
             }
             
-            json.forEach(element => {
-                var dt = new Date(element["UAUTC"]);
-                var rs = element["SXSRS"] ? element["SXSRS"] / 1.2 : 0;
-                var gt = element["CEMGT"] ? element["CEMGT"] : 0;
-                var et = element["EGRMT"] ? element["EGRMT"] : 0;
-                if (gt <= 30 || et <= 38) { rs = 0; }
-                
-                UAUTC.push(dt.toLocaleString());
-                SXSRS.push(Number(rs.toFixed(1)));
-                CEMGT.push(Number(gt.toFixed(2)));
-                EGRMT.push(Number(et.toFixed(2)));
-                MATXT.push(element["MATXT"]);
+            // 检查第一个元素的结构
+            console.log('First element structure:', json[0]);
+            
+            // 清空现有数据数组
+            UAUTC = [];
+            SXSRS = [];
+            CEMGT = [];
+            EGRMT = [];
+            MATXT = [];
+            
+            json.forEach((element, index) => {
+                try {
+                    // 检查必要字段
+                    console.log(`Element ${index} fields:`, Object.keys(element));
+                    
+                    var dt = new Date(element["UAUTC"] || element["timestamp"]);
+                    var rs = element["SXSRS"] ? element["SXSRS"] / 1.2 : 0;
+                    var gt = element["CEMGT"] ? element["CEMGT"] : 0;
+                    var et = element["EGRMT"] ? element["EGRMT"] : 0;
+                    if (gt <= 30 || et <= 38) { rs = 0; }
+                    
+                    UAUTC.push(dt.toLocaleString());
+                    SXSRS.push(Number(rs.toFixed(1)));
+                    CEMGT.push(Number(gt.toFixed(2)));
+                    EGRMT.push(Number(et.toFixed(2)));
+                    MATXT.push(element["MATXT"] || 'Unknown');
+                } catch (error) {
+                    console.error(`Error processing element ${index}:`, error);
+                    console.error(`Element ${index}:`, element);
+                }
             });
+            
+            // 检查是否有有效数据
+            if (UAUTC.length === 0) {
+                console.error('No valid data processed');
+                document.getElementById("msgbox").innerText = 'Error: No valid data processed';
+                updateDowntimeTable([]);
+                return;
+            }
             
             console.log('Processed data:');
             console.log('Labels:', UAUTC);
