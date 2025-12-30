@@ -1,0 +1,344 @@
+[
+  {
+    "test_name": "Basic Request Test",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Basic request succeeded",
+    "response_time": 2504.789352416992,
+    "timestamp": "2025-12-30T13:27:56.103025"
+  },
+  {
+    "test_name": "Different Time Ranges Test (1h)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Time range 1h succeeded",
+    "response_time": 2226.0258197784424,
+    "timestamp": "2025-12-30T13:27:58.329051"
+  },
+  {
+    "test_name": "Different Time Ranges Test (6h)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Time range 6h succeeded",
+    "response_time": 2311.793327331543,
+    "timestamp": "2025-12-30T13:28:00.640844"
+  },
+  {
+    "test_name": "Different Time Ranges Test (24h)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Time range 24h succeeded",
+    "response_time": 2499.781370162964,
+    "timestamp": "2025-12-30T13:28:03.142169"
+  },
+  {
+    "test_name": "Different Time Ranges Test (72h)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Time range 72h succeeded",
+    "response_time": 2833.606719970703,
+    "timestamp": "2025-12-30T13:28:05.981927"
+  },
+  {
+    "test_name": "Different Time Ranges Test (168h)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Time range 168h succeeded",
+    "response_time": 4555.724620819092,
+    "timestamp": "2025-12-30T13:28:10.550013"
+  },
+  {
+    "test_name": "Data Format Test - rows",
+    "status": "FAIL",
+    "expected": "Exists",
+    "actual": "Missing",
+    "message": "Field rows is missing",
+    "response_time": 2542.375326156616,
+    "timestamp": "2025-12-30T13:28:13.093906"
+  },
+  {
+    "test_name": "Data Format Test - total",
+    "status": "FAIL",
+    "expected": "Exists",
+    "actual": "Missing",
+    "message": "Field total is missing",
+    "response_time": 2542.375326156616,
+    "timestamp": "2025-12-30T13:28:13.095513"
+  },
+  {
+    "test_name": "Data Format Test - data",
+    "status": "PASS",
+    "expected": "Exists",
+    "actual": "Exists",
+    "message": "Field data exists",
+    "response_time": 2542.375326156616,
+    "timestamp": "2025-12-30T13:28:13.095513"
+  },
+  {
+    "test_name": "Real-time Data Test",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Real-time data request succeeded",
+    "response_time": 2176.154851913452,
+    "timestamp": "2025-12-30T13:28:15.271668"
+  },
+  {
+    "test_name": "Empty Time Range Test",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Empty time range handled correctly",
+    "response_time": 2193.2783126831055,
+    "timestamp": "2025-12-30T13:28:17.466471"
+  },
+  {
+    "test_name": "Start Time > End Time Test",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected invalid time range",
+    "response_time": 2042.297124862671,
+    "timestamp": "2025-12-30T13:28:19.510291"
+  },
+  {
+    "test_name": "Extreme Time Ranges Test",
+    "status": "FAIL",
+    "expected": 200,
+    "actual": "None",
+    "message": "Request failed or timed out",
+    "response_time": 17063.774347305298,
+    "timestamp": "2025-12-30T13:28:36.574066"
+  },
+  {
+    "test_name": "Future Time Test",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Future time range handled correctly",
+    "response_time": 2180.854082107544,
+    "timestamp": "2025-12-30T13:28:38.754920"
+  },
+  {
+    "test_name": "Missing Data Range Test",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Missing data range handled correctly",
+    "response_time": 2181.3793182373047,
+    "timestamp": "2025-12-30T13:28:40.936299"
+  },
+  {
+    "test_name": "Missing Parameters Test (No Params)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected missing parameters",
+    "response_time": 2061.4354610443115,
+    "timestamp": "2025-12-30T13:28:42.997735"
+  },
+  {
+    "test_name": "Missing Parameters Test (Missing Start)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected missing start_datetime",
+    "response_time": 2049.987554550171,
+    "timestamp": "2025-12-30T13:28:45.047722"
+  },
+  {
+    "test_name": "Missing Parameters Test (Missing End)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected missing end_datetime",
+    "response_time": 2048.6433506011963,
+    "timestamp": "2025-12-30T13:28:47.096365"
+  },
+  {
+    "test_name": "Invalid Parameters Test (1)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected invalid parameters",
+    "response_time": 2052.92010307312,
+    "timestamp": "2025-12-30T13:28:49.150840"
+  },
+  {
+    "test_name": "Invalid Parameters Test (2)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected invalid parameters",
+    "response_time": 2045.9802150726318,
+    "timestamp": "2025-12-30T13:28:51.196821"
+  },
+  {
+    "test_name": "Invalid Parameters Test (3)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected invalid parameters",
+    "response_time": 2041.0964488983154,
+    "timestamp": "2025-12-30T13:28:53.239474"
+  },
+  {
+    "test_name": "Invalid Parameters Test (4)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected invalid parameters",
+    "response_time": 2080.0726413726807,
+    "timestamp": "2025-12-30T13:28:55.320264"
+  },
+  {
+    "test_name": "Invalid Parameters Test (5)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": "Error",
+    "message": "Correctly rejected invalid parameters",
+    "response_time": 2068.509101867676,
+    "timestamp": "2025-12-30T13:28:57.389790"
+  },
+  {
+    "test_name": "Invalid JSON Test",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": 500,
+    "message": "Correctly rejected invalid JSON",
+    "response_time": null,
+    "timestamp": "2025-12-30T13:28:59.442010"
+  },
+  {
+    "test_name": "Unsupported Methods Test (GET)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": 405,
+    "message": "Correctly rejected GET method",
+    "response_time": 2055.349826812744,
+    "timestamp": "2025-12-30T13:29:01.497359"
+  },
+  {
+    "test_name": "Unsupported Methods Test (PUT)",
+    "status": "PASS",
+    "expected": "Error",
+    "actual": 405,
+    "message": "Correctly rejected PUT method",
+    "response_time": null,
+    "timestamp": "2025-12-30T13:29:03.545146"
+  },
+  {
+    "test_name": "Proxy Accuracy Test",
+    "status": "FAIL",
+    "expected": "Match",
+    "actual": "Mismatch",
+    "message": "Proxy and internal API responses differ in data",
+    "response_time": null,
+    "timestamp": "2025-12-30T13:29:06.489564"
+  },
+  {
+    "test_name": "CORS Headers Test - Access-Control-Allow-Origin",
+    "status": "PASS",
+    "expected": "*",
+    "actual": "*",
+    "message": "CORS header Access-Control-Allow-Origin is correct",
+    "response_time": 2028.3751487731934,
+    "timestamp": "2025-12-30T13:29:08.517939"
+  },
+  {
+    "test_name": "CORS Headers Test - Access-Control-Allow-Methods",
+    "status": "PASS",
+    "expected": "GET, POST, OPTIONS",
+    "actual": "GET, POST, OPTIONS",
+    "message": "CORS header Access-Control-Allow-Methods is correct",
+    "response_time": 2028.3751487731934,
+    "timestamp": "2025-12-30T13:29:08.517939"
+  },
+  {
+    "test_name": "CORS Headers Test - Access-Control-Allow-Headers",
+    "status": "PASS",
+    "expected": "Content-Type",
+    "actual": "Content-Type",
+    "message": "CORS header Access-Control-Allow-Headers is correct",
+    "response_time": 2028.3751487731934,
+    "timestamp": "2025-12-30T13:29:08.517939"
+  },
+  {
+    "test_name": "OPTIONS Request Test",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "OPTIONS request succeeded",
+    "response_time": 2059.739589691162,
+    "timestamp": "2025-12-30T13:29:10.578326"
+  },
+  {
+    "test_name": "Response Time Benchmark Test",
+    "status": "PASS",
+    "expected": "<1000ms",
+    "actual": "Avg: 2520.47ms",
+    "message": "Response time benchmark completed",
+    "response_time": null,
+    "timestamp": "2025-12-30T13:29:35.785661"
+  },
+  {
+    "test_name": "Concurrent Requests Test (15 users)",
+    "status": "PASS",
+    "expected": 15,
+    "actual": 15,
+    "message": "Concurrent requests completed",
+    "response_time": 2686.027399698893,
+    "timestamp": "2025-12-30T13:29:38.958633"
+  },
+  {
+    "test_name": "HTTPS Enforcement Test",
+    "status": "SKIP",
+    "expected": "HTTPS",
+    "actual": "HTTP",
+    "message": "API URL is not HTTPS",
+    "response_time": null,
+    "timestamp": "2025-12-30T13:29:38.959670"
+  },
+  {
+    "test_name": "Input Validation Test (1)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Malicious input handled safely",
+    "response_time": 2175.9629249572754,
+    "timestamp": "2025-12-30T13:29:41.136147"
+  },
+  {
+    "test_name": "Input Validation Test (2)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": "None",
+    "message": "Malicious input rejected",
+    "response_time": 2039.6020412445068,
+    "timestamp": "2025-12-30T13:29:43.175749"
+  },
+  {
+    "test_name": "Input Validation Test (3)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Malicious input handled safely",
+    "response_time": 3624.5274543762207,
+    "timestamp": "2025-12-30T13:29:46.800276"
+  },
+  {
+    "test_name": "Input Validation Test (4)",
+    "status": "PASS",
+    "expected": 200,
+    "actual": 200,
+    "message": "Malicious input handled safely",
+    "response_time": 2209.437847137451,
+    "timestamp": "2025-12-30T13:29:49.009715"
+  }
+]
