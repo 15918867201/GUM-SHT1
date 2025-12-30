@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>切片停机监控</title>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        // 自动检测并强制使用 HTTPS
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            location.replace(`https:${location.href.substring(location.protocol.length)}`);
+        }
+    </script>
 </head>
 <body>
     <!-- 标题 -->
@@ -518,8 +524,7 @@
                 fetch(url, { 
                     method: "POST", 
                     headers: { 
-                        "Content-Type": "application/json",
-                        "ngrok-skip-browser-warning": "true"
+                        "Content-Type": "application/json"
                     }, 
                     body: JSON.stringify({ "start_datetime": start_ts, "end_datetime": end_ts }) 
                 })
