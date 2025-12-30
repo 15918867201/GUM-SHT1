@@ -27,7 +27,7 @@ def add_cors_headers(response):
     return response
 
 # 代理API请求
-@app.route('/api/huacore.forms/documentapi/getvalue', methods=['POST', 'OPTIONS'])
+@app.route('/api/huacore.forms/documentapi/getvalue', methods=['GET', 'POST', 'OPTIONS'])
 def proxy_api():
     if request.method == 'OPTIONS':
         return '', 200
@@ -36,22 +36,41 @@ def proxy_api():
         # 内部API服务器地址
         internal_api_url = 'http://10.157.85.11/api/huacore.forms/documentapi/getvalue'
         
-        # 获取请求数据
-        data = request.get_json()
-        
-        # 验证必要参数
-        if not data:
-            return jsonify({'error': 'Missing request body'}), 400
+        # 获取请求数据 - 支持GET和POST
+        if request.method == 'GET':
+            # 从查询参数获取数据
+            start_datetime = request.args.get('start_datetime')
+            end_datetime = request.args.get('end_datetime')
             
-        if 'start_datetime' not in data or 'end_datetime' not in data:
-            return jsonify({'error': 'Missing required parameters: start_datetime and end_datetime'}), 400
+            # 验证必要参数
+            if not start_datetime or not end_datetime:
+                return jsonify({'error': 'Missing required parameters: start_datetime and end_datetime'}), 400
+                
+            # 转换为整数
+            try:
+                start_datetime = int(start_datetime)
+                end_datetime = int(end_datetime)
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid parameters: start_datetime and end_datetime must be integers'}), 400
+                
+            data = {'start_datetime': start_datetime, 'end_datetime': end_datetime}
+        else:
+            # 从POST请求体获取数据
+            data = request.get_json()
             
-        # 验证参数类型
-        try:
-            start_datetime = int(data['start_datetime'])
-            end_datetime = int(data['end_datetime'])
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid parameters: start_datetime and end_datetime must be integers'}), 400
+            # 验证必要参数
+            if not data:
+                return jsonify({'error': 'Missing request body'}), 400
+                
+            if 'start_datetime' not in data or 'end_datetime' not in data:
+                return jsonify({'error': 'Missing required parameters: start_datetime and end_datetime'}), 400
+                
+            # 验证参数类型
+            try:
+                start_datetime = int(data['start_datetime'])
+                end_datetime = int(data['end_datetime'])
+            except (ValueError, TypeError):
+                return jsonify({'error': 'Invalid parameters: start_datetime and end_datetime must be integers'}), 400
         
         # 验证时间范围
         if start_datetime > end_datetime:
