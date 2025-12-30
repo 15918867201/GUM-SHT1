@@ -85,15 +85,17 @@
                 <thead>
                     <tr style="background-color: #f2f2f2;">
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">日期</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">班次</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">香型</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">开始时间</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">结束时间</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">停机时间（min）</th>
-                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">香型</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
+                        <td colspan="6" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
                     </tr>
                 </tbody>
             </table>
@@ -442,7 +444,7 @@
             tableBody.innerHTML = '';
             
             if (downtimeList.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="6" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                 return;
             }
             
@@ -456,9 +458,20 @@
                 const startTimeStr = startTime.toTimeString().split(' ')[0];
                 const endTimeStr = endTime.toTimeString().split(' ')[0];
                 
+                const hour = startTime.getHours();
+                let shift = '';
+                if (hour >= 0 && hour < 8) {
+                    shift = '晚班';
+                } else if (hour >= 8 && hour < 16) {
+                    shift = '早班';
+                } else {
+                    shift = '中班';
+                }
+                
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td style="border: 1px solid #ddd; padding: 8px;">${date}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${shift}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${startTimeStr}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${endTimeStr}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${durationMins}分钟</td>
