@@ -84,14 +84,16 @@
             <table id="downtimeTable" style="width: 100%; border-collapse: collapse; font-size: 14px;">
                 <thead>
                     <tr style="background-color: #f2f2f2;">
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">日期</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">开始时间</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">结束时间</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">停机时间（min）</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">香型</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
+                        <td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
                     </tr>
                 </tbody>
             </table>
@@ -400,36 +402,36 @@
         });
 
         // 统计停机时间函数
-        function calculateDowntime(times, speeds) {
+        function calculateDowntime(times, speeds, flavors) {
             const downtimeList = [];
             let downtimeStart = null;
+            let downtimeFlavor = null;
             
-            // 遍历所有数据点，统计连续为0的时间段
             for (let i = 0; i < speeds.length; i++) {
                 if (speeds[i] === 0 && downtimeStart === null) {
-                    // 开始停机
                     downtimeStart = times[i];
+                    downtimeFlavor = flavors[i] || 'Unknown';
                 } else if (speeds[i] !== 0 && downtimeStart !== null) {
-                    // 结束停机
                     const downtimeEnd = times[i];
                     downtimeList.push({
                         start: downtimeStart,
-                        end: downtimeEnd
+                        end: downtimeEnd,
+                        flavor: downtimeFlavor
                     });
                     downtimeStart = null;
+                    downtimeFlavor = null;
                 }
             }
             
-            // 处理最后一个数据点仍然是停机状态的情况
             if (downtimeStart !== null) {
                 const downtimeEnd = times[times.length - 1];
                 downtimeList.push({
                     start: downtimeStart,
-                    end: downtimeEnd
+                    end: downtimeEnd,
+                    flavor: downtimeFlavor
                 });
             }
             
-            // 更新表格
             updateDowntimeTable(downtimeList);
         }
         
@@ -437,33 +439,30 @@
         function updateDowntimeTable(downtimeList) {
             const tableBody = document.querySelector('#downtimeTable tbody');
             
-            // 清空表格
             tableBody.innerHTML = '';
             
-            // 如果没有停机数据
             if (downtimeList.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                 return;
             }
             
-            // 添加停机数据行
             downtimeList.forEach(downtime => {
-                // 解析日期时间字符串
                 const startTime = new Date(downtime.start);
                 const endTime = new Date(downtime.end);
-                
-                // 计算停机持续时间（毫秒）
                 const durationMs = endTime - startTime;
-                
-                // 转换为分钟数（保留一位小数）
                 const durationMins = Math.round((durationMs / (1000 * 60)) * 10) / 10;
                 
-                // 创建表格行
+                const date = startTime.toLocaleDateString('zh-CN');
+                const startTimeStr = startTime.toTimeString().split(' ')[0];
+                const endTimeStr = endTime.toTimeString().split(' ')[0];
+                
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td style="border: 1px solid #ddd; padding: 8px;">${downtime.start}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${downtime.end}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${date}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${startTimeStr}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${endTimeStr}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${durationMins}分钟</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${downtime.flavor || 'Unknown'}</td>
                 `;
                 
                 tableBody.appendChild(row);
@@ -654,8 +653,7 @@
             chart.data.datasets[2].data = CEMGT;
             chart.update();
             
-            // 统计停机时间
-            calculateDowntime(UAUTC, SXSRS);
+            calculateDowntime(UAUTC, SXSRS, MATXT);
             
             console.log('Chart updated successfully with real API data');
         }
