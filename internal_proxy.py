@@ -4,27 +4,12 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# 生产环境HTTPS强制重定向
+# 生产环境HTTPS强制重定向 - 已禁用以支持Ngrok内网穿透
+# Ngrok会将HTTPS请求转换为HTTP请求转发到本地服务器
+# 因此不需要强制重定向到HTTPS
 @app.before_request
 def enforce_https():
-    # 在生产环境中启用HTTPS强制重定向
-    # 检查是否在生产环境（通过FLASK_ENV环境变量或DEBUG模式）
-    if not app.debug:
-        # 优先检查反向代理设置的X-Forwarded-Proto头（对于生产环境的反向代理）
-        proto = request.headers.get('X-Forwarded-Proto')
-        
-        # 确定当前使用的协议
-        if proto:
-            is_secure = proto == 'https'
-        else:
-            # 如果没有代理头，使用原始请求的协议
-            is_secure = request.is_secure
-        
-        # 如果不是HTTPS，重定向到HTTPS
-        if not is_secure:
-            # 构建HTTPS URL
-            url = request.url.replace('http://', 'https://')
-            return redirect(url, code=301)
+    pass
 
 # 允许所有跨域请求
 @app.after_request
