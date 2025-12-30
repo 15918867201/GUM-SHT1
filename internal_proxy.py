@@ -1,8 +1,21 @@
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, abort, redirect, url_for
 import requests
 from datetime import datetime
 
 app = Flask(__name__)
+
+# 生产环境HTTPS强制重定向
+@app.before_request
+def enforce_https():
+    # 在生产环境中启用HTTPS强制重定向
+    # 检查是否在生产环境（通过FLASK_ENV环境变量或DEBUG模式）
+    if not app.debug and not request.is_secure:
+        # 检查是否有反向代理设置的X-Forwarded-Proto头
+        proto = request.headers.get('X-Forwarded-Proto')
+        if proto == 'http':
+            # 构建HTTPS URL
+            url = request.url.replace('http://', 'https://')
+            return redirect(url, code=301)
 
 # 允许所有跨域请求
 @app.after_request
