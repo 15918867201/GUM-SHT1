@@ -1,0 +1,69 @@
+
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.switch {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* background */
+.slider {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    transition: .4s;
+    border: 1px solid #929292;
+    border-radius: 20px;
+    background-color: #FFFFFF;
+}
+
+/* point */
+.slider::before {
+    position: absolute;
+    content: "";
+    height: 10px;
+    width: 10px;
+    top: 5px;
+    left: 5px;
+    background-color: #2B2B2B;
+    border-radius: 10px;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    border-color: #0078D4;
+    background: #0078D4;
+}
+
+input:checked + .slider::before {
+    transform: translateX(20px);
+    background: #FFFFFF;
+}
+
+/* 快速选择按钮样式 */
+.quickSelectBtn {
+    padding: 6px 15px;
+    font-size: 14px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quickSelectBtn.active {
+    background-color: #0078D4;
+    color: white;
+    border-color: #0078D4;
+}
+
+
+
+/*# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJTdHlsZXMuY3NzIiwic291cmNlc0NvbnRlbnQiOltdLCJzb3VyY2VSb290IjoiL3NvdXJjZS8ifQ== */
