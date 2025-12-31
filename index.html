@@ -84,13 +84,14 @@
                 <thead>
                     <tr style="background-color: #f2f2f2;">
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">日期</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">班次</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">香型</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">产量（批）</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
+                        <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
                     </tr>
                 </tbody>
             </table>
@@ -493,12 +494,32 @@
             updateDowntimeTable(downtimeList);
         }
         
+        // 根据日期时间确定班次
+        function getShiftFromDate(dateStr) {
+            if (!dateStr || dateStr === '-') {
+                return '-';
+            }
+            
+            // 从日期字符串中提取时间部分
+            const date = new Date(dateStr);
+            const hour = date.getHours();
+            
+            if (hour >= 0 && hour < 8) {
+                return '晚班';
+            } else if (hour >= 8 && hour < 16) {
+                return '早班';
+            } else {
+                return '中班';
+            }
+        }
+        
         // 计算产量
         function calculateProduction(times, speeds, flavors) {
             const productionByFlavor = {};
             let currentFlavor = null;
             let currentFlavorProduction = 0;
             let currentDate = null;
+            let currentShift = null;
             
             for (let i = 0; i < speeds.length; i++) {
                 const speed = speeds[i];
@@ -520,19 +541,30 @@
                     }
                     productionByFlavor[currentFlavor].push({
                         date: currentDate,
+                        shift: currentShift,
                         production: currentFlavorProduction
                     });
                     currentFlavorProduction = 0;
                     currentDate = null;
+                    currentShift = null;
                 }
                 
                 // 累加当前香型的产量
                 currentFlavor = flavor;
                 currentFlavorProduction += minuteProduction;
                 
-                // 保存当前日期
+                // 保存当前日期和班次
                 if (!currentDate && time) {
-                    currentDate = new Date(time).toLocaleDateString('zh-CN');
+                    const dateObj = new Date(time);
+                    currentDate = dateObj.toLocaleDateString('zh-CN');
+                    const hour = dateObj.getHours();
+                    if (hour >= 0 && hour < 8) {
+                        currentShift = '晚班';
+                    } else if (hour >= 8 && hour < 16) {
+                        currentShift = '早班';
+                    } else {
+                        currentShift = '中班';
+                    }
                 }
             }
             
@@ -543,6 +575,7 @@
                 }
                 productionByFlavor[currentFlavor].push({
                     date: currentDate,
+                    shift: currentShift,
                     production: currentFlavorProduction
                 });
             }
@@ -582,7 +615,7 @@
                 // 自动模式：显示所有香型及其产量
                 const flavors = Object.keys(productionByFlavor);
                 if (flavors.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                     return;
                 }
                 
@@ -592,6 +625,7 @@
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td style="border: 1px solid #ddd; padding: 8px;">${data.date || '-'}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.shift || '-'}</td>
                             <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
                             <td style="border: 1px solid #ddd; padding: 8px;">${data.production.toFixed(2)}</td>
                         `;
@@ -602,7 +636,7 @@
                 // 手动模式：显示所有香型的产量，自动模式卡片显示"--"
                 const flavors = Object.keys(productionByFlavor);
                 if (flavors.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                     return;
                 }
                 
@@ -612,6 +646,7 @@
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td style="border: 1px solid #ddd; padding: 8px;">${data.date || '-'}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.shift || '-'}</td>
                             <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
                             <td style="border: 1px solid #ddd; padding: 8px;">${data.production.toFixed(2)}</td>
                         `;
@@ -735,7 +770,7 @@
                         document.getElementById("msgbox").innerText = 'Error: ' + err.errMsg;
                         updateDowntimeTable([]);
                         const productionTableBody = document.querySelector('#productionTable tbody');
-                        productionTableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                        productionTableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                     }
                 });
             } else {
@@ -776,7 +811,7 @@
                                 document.getElementById("msgbox").innerText = 'Error: Unexpected data format';
                                 updateDowntimeTable([]);
                                 const productionTableBody = document.querySelector('#productionTable tbody');
-                                productionTableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                                productionTableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                             }
                         } else if (json.rows) {
                             console.log('Using rows field from response');
@@ -786,14 +821,14 @@
                             document.getElementById("msgbox").innerText = 'Error: No data field found';
                             updateDowntimeTable([]);
                             const productionTableBody = document.querySelector('#productionTable tbody');
-                            productionTableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                            productionTableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                         }
                     } else {
                         console.error('Invalid response format:', json);
                         document.getElementById("msgbox").innerText = 'Error: Invalid response format';
                         updateDowntimeTable([]);
                         const productionTableBody = document.querySelector('#productionTable tbody');
-                        productionTableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                        productionTableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                     }
                 })
                 .catch(error => {
@@ -803,7 +838,7 @@
                     document.getElementById("msgbox").innerText = 'Error: ' + (error.message || 'Network error');
                     updateDowntimeTable([]);
                     const productionTableBody = document.querySelector('#productionTable tbody');
-                    productionTableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                    productionTableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                 });
             }
         };
@@ -831,7 +866,7 @@
                 updateDowntimeTable([]);
                 // 清空产量统计表格
                 const productionTableBody = document.querySelector('#productionTable tbody');
-                productionTableBody.innerHTML = '<tr><td colspan="3" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                productionTableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                 return;
             }
             
