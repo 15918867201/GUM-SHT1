@@ -507,8 +507,8 @@
                     continue;
                 }
                 
-                // 计算当前分钟的产量：当前速度*0.112836
-                const minuteProduction = speed * 0.112836;
+                // 计算当前分钟的产量：当前速度*0.42276/562（去掉10分钟的开机时间）
+                const minuteProduction = speed * 0.42276 / 562 ;
                 
                 // 如果香型切换，保存当前香型的产量并开始新的香型
                 if (currentFlavor !== null && currentFlavor !== flavor) {
