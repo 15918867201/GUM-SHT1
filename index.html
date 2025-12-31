@@ -507,10 +507,10 @@
                 row.innerHTML = `
                     <td style="border: 1px solid #ddd; padding: 8px;">${date}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${shift}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${downtime.flavor || 'Unknown'}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${startTimeStr}</td>
                     <td style="border: 1px solid #ddd; padding: 8px;">${endTimeStr}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${durationMins}分钟</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">${downtime.flavor || 'Unknown'}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">${durationMins}分钟</td>                    
                 `;
                 
                 tableBody.appendChild(row);
