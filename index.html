@@ -674,6 +674,11 @@
                     const flavors = Object.keys(productionByDate[date][shift]);
                     flavors.forEach(flavor => {
                         const data = productionByDate[date][shift][flavor];
+                        
+                        if (flavor === 'Unknown' || data.production <= 0) {
+                            return;
+                        }
+                        
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td style="border: 1px solid #ddd; padding: 8px;">${date}</td>
