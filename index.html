@@ -515,11 +515,7 @@
         
         // 计算产量
         function calculateProduction(times, speeds, flavors) {
-            const productionByFlavor = {};
-            let currentFlavor = null;
-            let currentFlavorProduction = 0;
-            let currentDate = null;
-            let currentShift = null;
+            const productionByDate = {};
             
             for (let i = 0; i < speeds.length; i++) {
                 const speed = speeds[i];
@@ -534,53 +530,35 @@
                 // 计算当前分钟的产量：当前速度*0.42276/562（去掉10分钟的开机时间）
                 const minuteProduction = speed * 0.392 / 562;
                 
-                // 如果香型切换，保存当前香型的产量并开始新的香型
-                if (currentFlavor !== null && currentFlavor !== flavor) {
-                    if (!productionByFlavor[currentFlavor]) {
-                        productionByFlavor[currentFlavor] = [];
-                    }
-                    productionByFlavor[currentFlavor].push({
-                        date: currentDate,
-                        shift: currentShift,
-                        production: currentFlavorProduction
-                    });
-                    currentFlavorProduction = 0;
-                    currentDate = null;
-                    currentShift = null;
+                // 确定日期和班次
+                const dateObj = new Date(time);
+                const date = dateObj.toLocaleDateString('zh-CN');
+                const hour = dateObj.getHours();
+                let shift = '';
+                if (hour >= 0 && hour < 8) {
+                    shift = '晚班';
+                } else if (hour >= 8 && hour < 16) {
+                    shift = '早班';
+                } else {
+                    shift = '中班';
                 }
                 
-                // 累加当前香型的产量
-                currentFlavor = flavor;
-                currentFlavorProduction += minuteProduction;
+                // 初始化数据结构
+                if (!productionByDate[date]) {
+                    productionByDate[date] = {};
+                }
+                if (!productionByDate[date][shift]) {
+                    productionByDate[date][shift] = {};
+                }
+                if (!productionByDate[date][shift][flavor]) {
+                    productionByDate[date][shift][flavor] = 0;
+                }
                 
-                // 保存当前日期和班次
-                if (!currentDate && time) {
-                    const dateObj = new Date(time);
-                    currentDate = dateObj.toLocaleDateString('zh-CN');
-                    const hour = dateObj.getHours();
-                    if (hour >= 0 && hour < 8) {
-                        currentShift = '晚班';
-                    } else if (hour >= 8 && hour < 16) {
-                        currentShift = '早班';
-                    } else {
-                        currentShift = '中班';
-                    }
-                }
+                // 累加产量
+                productionByDate[date][shift][flavor] += minuteProduction;
             }
             
-            // 保存最后一个香型的产量
-            if (currentFlavor !== null) {
-                if (!productionByFlavor[currentFlavor]) {
-                    productionByFlavor[currentFlavor] = [];
-                }
-                productionByFlavor[currentFlavor].push({
-                    date: currentDate,
-                    shift: currentShift,
-                    production: currentFlavorProduction
-                });
-            }
-            
-            return productionByFlavor;
+            return productionByDate;
         }
         
         // 检测当前模式（自动/手动）
@@ -606,54 +584,41 @@
         }
         
         // 更新产量统计表格
-        function updateProductionTable(productionByFlavor, mode, autoModeProduction = null) {
+        function updateProductionTable(productionByDate, mode, autoModeProduction = null) {
             const tableBody = document.querySelector('#productionTable tbody');
             
             tableBody.innerHTML = '';
             
-            if (mode === 'auto') {
-                // 自动模式：显示所有香型及其产量
-                const flavors = Object.keys(productionByFlavor);
-                if (flavors.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
-                    return;
-                }
-                
-                flavors.forEach(flavor => {
-                    const productionData = productionByFlavor[flavor];
-                    productionData.forEach(data => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td style="border: 1px solid #ddd; padding: 8px;">${data.date || '-'}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${data.shift || '-'}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${data.production.toFixed(2)}</td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                });
-            } else {
-                // 手动模式：显示所有香型的产量，自动模式卡片显示"--"
-                const flavors = Object.keys(productionByFlavor);
-                if (flavors.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
-                    return;
-                }
-                
-                flavors.forEach(flavor => {
-                    const productionData = productionByFlavor[flavor];
-                    productionData.forEach(data => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td style="border: 1px solid #ddd; padding: 8px;">${data.date || '-'}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${data.shift || '-'}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${data.production.toFixed(2)}</td>
-                        `;
-                        tableBody.appendChild(row);
-                    });
-                });
+            const dates = Object.keys(productionByDate);
+            if (dates.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                return;
             }
+            
+            // 按日期排序
+            dates.sort();
+            
+            dates.forEach(date => {
+                const shifts = Object.keys(productionByDate[date]);
+                // 按班次排序：晚班、早班、中班
+                const shiftOrder = ['晚班', '早班', '中班'];
+                shifts.sort((a, b) => shiftOrder.indexOf(a) - shiftOrder.indexOf(b));
+                
+                shifts.forEach(shift => {
+                    const flavors = Object.keys(productionByDate[date][shift]);
+                    flavors.forEach(flavor => {
+                        const production = productionByDate[date][shift][flavor];
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td style="border: 1px solid #ddd; padding: 8px;">${date}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${shift}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${production.toFixed(2)}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                });
+            });
         }
         
         // 更新停机时间表格
@@ -925,9 +890,9 @@
             calculateDowntime(UAUTC, SXSRS, MATXT);
             
             // 计算产量并更新产量统计表格
-            const productionByFlavor = calculateProduction(UAUTC, SXSRS, MATXT);
+            const productionByDate = calculateProduction(UAUTC, SXSRS, MATXT);
             const mode = detectMode(customStartTs, customEndTs);
-            updateProductionTable(productionByFlavor, mode);
+            updateProductionTable(productionByDate, mode);
             
             console.log('Chart updated successfully with real API data');
         }
