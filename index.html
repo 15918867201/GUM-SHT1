@@ -87,11 +87,13 @@
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">班次</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">香型</th>
                         <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">产量（批）</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">停机次数</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">停机时间汇总（分钟）</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
+                        <td colspan="6" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
                     </tr>
                 </tbody>
             </table>
@@ -513,7 +515,7 @@
             }
         }
         
-        // 计算产量
+        // 计算产量和停机信息
         function calculateProduction(times, speeds, flavors) {
             const productionByDate = {};
             
@@ -521,14 +523,6 @@
                 const speed = speeds[i];
                 const flavor = flavors[i] || 'Unknown';
                 const time = times[i];
-                
-                // 速度为0时跳过该分钟的产量计算
-                if (speed === 0) {
-                    continue;
-                }
-                
-                // 计算当前分钟的产量：当前速度*0.42276/562（去掉10分钟的开机时间）
-                const minuteProduction = speed * 0.392 / 562;
                 
                 // 确定日期和班次
                 const dateObj = new Date(time);
@@ -551,11 +545,83 @@
                     productionByDate[date][shift] = {};
                 }
                 if (!productionByDate[date][shift][flavor]) {
-                    productionByDate[date][shift][flavor] = 0;
+                    productionByDate[date][shift][flavor] = {
+                        production: 0,
+                        downtimeCount: 0,
+                        downtimeTime: 0
+                    };
                 }
                 
-                // 累加产量
-                productionByDate[date][shift][flavor] += minuteProduction;
+                // 计算产量（速度不为0时）
+                if (speed !== 0) {
+                    const minuteProduction = speed * 0.392 / 562;
+                    productionByDate[date][shift][flavor].production += minuteProduction;
+                }
+            }
+            
+            // 计算停机次数和停机时间
+            let downtimeStart = null;
+            let downtimeFlavor = null;
+            
+            for (let i = 0; i < speeds.length; i++) {
+                const speed = speeds[i];
+                const flavor = flavors[i] || 'Unknown';
+                const time = times[i];
+                
+                // 确定日期和班次
+                const dateObj = new Date(time);
+                const date = dateObj.toLocaleDateString('zh-CN');
+                const hour = dateObj.getHours();
+                let shift = '';
+                if (hour >= 0 && hour < 8) {
+                    shift = '晚班';
+                } else if (hour >= 8 && hour < 16) {
+                    shift = '早班';
+                } else {
+                    shift = '中班';
+                }
+                
+                // 检测停机开始
+                if (speed === 0 && downtimeStart === null) {
+                    downtimeStart = time;
+                    downtimeFlavor = flavor;
+                }
+                // 检测停机结束
+                else if (speed !== 0 && downtimeStart !== null) {
+                    const downtimeEnd = time;
+                    const downtimeDuration = (new Date(downtimeEnd) - new Date(downtimeStart)) / (1000 * 60);
+                    
+                    // 累加停机次数和停机时间
+                    if (productionByDate[date] && productionByDate[date][shift] && productionByDate[date][shift][downtimeFlavor]) {
+                        productionByDate[date][shift][downtimeFlavor].downtimeCount += 1;
+                        productionByDate[date][shift][downtimeFlavor].downtimeTime += downtimeDuration;
+                    }
+                    
+                    downtimeStart = null;
+                    downtimeFlavor = null;
+                }
+            }
+            
+            // 处理最后一个停机事件
+            if (downtimeStart !== null) {
+                const downtimeEnd = times[times.length - 1];
+                const downtimeDuration = (new Date(downtimeEnd) - new Date(downtimeStart)) / (1000 * 60);
+                const dateObj = new Date(downtimeStart);
+                const date = dateObj.toLocaleDateString('zh-CN');
+                const hour = dateObj.getHours();
+                let shift = '';
+                if (hour >= 0 && hour < 8) {
+                    shift = '晚班';
+                } else if (hour >= 8 && hour < 16) {
+                    shift = '早班';
+                } else {
+                    shift = '中班';
+                }
+                
+                if (productionByDate[date] && productionByDate[date][shift] && productionByDate[date][shift][downtimeFlavor]) {
+                    productionByDate[date][shift][downtimeFlavor].downtimeCount += 1;
+                    productionByDate[date][shift][downtimeFlavor].downtimeTime += downtimeDuration;
+                }
             }
             
             return productionByDate;
@@ -591,7 +657,7 @@
             
             const dates = Object.keys(productionByDate);
             if (dates.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="6" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                 return;
             }
             
@@ -607,13 +673,15 @@
                 shifts.forEach(shift => {
                     const flavors = Object.keys(productionByDate[date][shift]);
                     flavors.forEach(flavor => {
-                        const production = productionByDate[date][shift][flavor];
+                        const data = productionByDate[date][shift][flavor];
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td style="border: 1px solid #ddd; padding: 8px;">${date}</td>
                             <td style="border: 1px solid #ddd; padding: 8px;">${shift}</td>
                             <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${production.toFixed(2)}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.production.toFixed(2)}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.downtimeCount}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${data.downtimeTime.toFixed(1)}</td>
                         `;
                         tableBody.appendChild(row);
                     });
