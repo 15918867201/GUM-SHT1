@@ -62,7 +62,7 @@ python internal_proxy.py
 
 #### 3.1 使用Ngrok
 ```bash
-ngrok http 5000
+ngrok http 8000
 ```
 获取生成的公网URL（格式：https://xxxx.ngrok-free.dev）
 
