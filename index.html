@@ -76,6 +76,26 @@
         <canvas id="myChart"></canvas>
     </div>
     
+    <!-- 产量统计表格 -->
+    <div style="margin-top: 30px;">
+        <h3 style="text-align: center; margin-bottom: 15px;">产量统计</h3>
+        <div style="overflow-x: auto;">
+            <table id="productionTable" style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">香型</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">产量（kg）</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
     <!-- 停机时间统计表格 -->
     <div style="margin-top: 30px;">
         <h3 style="text-align: center; margin-bottom: 15px;">停机时间统计</h3>
@@ -472,6 +492,114 @@
             updateDowntimeTable(downtimeList);
         }
         
+        // 计算产量
+        function calculateProduction(speeds, flavors) {
+            const productionByFlavor = {};
+            let currentFlavor = null;
+            let currentFlavorProduction = 0;
+            
+            for (let i = 0; i < speeds.length; i++) {
+                const speed = speeds[i];
+                const flavor = flavors[i] || 'Unknown';
+                
+                // 速度为0时跳过该分钟的产量计算
+                if (speed === 0) {
+                    continue;
+                }
+                
+                // 计算当前分钟的产量：当前速度*0.42276/562
+                const minuteProduction = speed * 0.42276 / 562;
+                
+                // 如果香型切换，保存当前香型的产量并开始新的香型
+                if (currentFlavor !== null && currentFlavor !== flavor) {
+                    if (!productionByFlavor[currentFlavor]) {
+                        productionByFlavor[currentFlavor] = 0;
+                    }
+                    productionByFlavor[currentFlavor] += currentFlavorProduction;
+                    currentFlavorProduction = 0;
+                }
+                
+                // 累加当前香型的产量
+                currentFlavor = flavor;
+                currentFlavorProduction += minuteProduction;
+            }
+            
+            // 保存最后一个香型的产量
+            if (currentFlavor !== null) {
+                if (!productionByFlavor[currentFlavor]) {
+                    productionByFlavor[currentFlavor] = 0;
+                }
+                productionByFlavor[currentFlavor] += currentFlavorProduction;
+            }
+            
+            return productionByFlavor;
+        }
+        
+        // 检测当前模式（自动/手动）
+        function detectMode(customStartTs, customEndTs) {
+            // 如果有自定义时间范围，则为手动模式
+            if (customStartTs !== null && customEndTs !== null) {
+                return 'manual';
+            }
+            
+            // 检查是否有快速选择按钮被选中
+            const activeQuickBtn = document.querySelector('.quickSelectBtn.active');
+            if (activeQuickBtn) {
+                // 如果选中的是"最近24小时"，则为自动模式
+                if (activeQuickBtn.dataset.type === '24h') {
+                    return 'auto';
+                }
+                // 否则为手动模式（班次选择）
+                return 'manual';
+            }
+            
+            // 默认为自动模式
+            return 'auto';
+        }
+        
+        // 更新产量统计表格
+        function updateProductionTable(productionByFlavor, mode, autoModeProduction = null) {
+            const tableBody = document.querySelector('#productionTable tbody');
+            
+            tableBody.innerHTML = '';
+            
+            if (mode === 'auto') {
+                // 自动模式：显示所有香型及其产量
+                const flavors = Object.keys(productionByFlavor);
+                if (flavors.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                    return;
+                }
+                
+                flavors.forEach(flavor => {
+                    const production = productionByFlavor[flavor];
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${production.toFixed(2)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } else {
+                // 手动模式：显示所有香型的产量，自动模式卡片显示"--"
+                const flavors = Object.keys(productionByFlavor);
+                if (flavors.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
+                    return;
+                }
+                
+                flavors.forEach(flavor => {
+                    const production = productionByFlavor[flavor];
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="border: 1px solid #ddd; padding: 8px;">${flavor}</td>
+                        <td style="border: 1px solid #ddd; padding: 8px;">${production.toFixed(2)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+        }
+        
         // 更新停机时间表格
         function updateDowntimeTable(downtimeList) {
             const tableBody = document.querySelector('#downtimeTable tbody');
@@ -555,12 +683,14 @@
                     success: (res) => {
                         console.log('uniCloud function response:', res);
                         const json = res.result.data;
-                        processApiResponse(json);
+                        processApiResponse(json, customStartTs, customEndTs);
                     },
                     fail: (err) => {
                         console.error('uniCloud function call failed:', err);
                         document.getElementById("msgbox").innerText = 'Error: ' + err.errMsg;
                         updateDowntimeTable([]);
+                        const productionTableBody = document.querySelector('#productionTable tbody');
+                        productionTableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                     }
                 });
             } else {
@@ -589,30 +719,36 @@
                     // 尝试处理不同的响应格式
                     if (typeof json === 'object' && json !== null) {
                         if (Array.isArray(json)) {
-                            processApiResponse(json);
+                            processApiResponse(json, customStartTs, customEndTs);
                         } else if (json.data) {
                             console.log('Using data field from response');
                             if (Array.isArray(json.data)) {
-                                processApiResponse(json.data);
+                                processApiResponse(json.data, customStartTs, customEndTs);
                             } else if (typeof json.data === 'object') {
-                                processApiResponse([json.data]);
+                                processApiResponse([json.data], customStartTs, customEndTs);
                             } else {
                                 console.error('Unexpected data format:', json.data);
                                 document.getElementById("msgbox").innerText = 'Error: Unexpected data format';
                                 updateDowntimeTable([]);
+                                const productionTableBody = document.querySelector('#productionTable tbody');
+                                productionTableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                             }
                         } else if (json.rows) {
                             console.log('Using rows field from response');
-                            processApiResponse(json.rows);
+                            processApiResponse(json.rows, customStartTs, customEndTs);
                         } else {
                             console.error('No data or rows field found in response');
                             document.getElementById("msgbox").innerText = 'Error: No data field found';
                             updateDowntimeTable([]);
+                            const productionTableBody = document.querySelector('#productionTable tbody');
+                            productionTableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                         }
                     } else {
                         console.error('Invalid response format:', json);
                         document.getElementById("msgbox").innerText = 'Error: Invalid response format';
                         updateDowntimeTable([]);
+                        const productionTableBody = document.querySelector('#productionTable tbody');
+                        productionTableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                     }
                 })
                 .catch(error => {
@@ -621,12 +757,14 @@
                     console.error('Error stack:', error.stack);
                     document.getElementById("msgbox").innerText = 'Error: ' + (error.message || 'Network error');
                     updateDowntimeTable([]);
+                    const productionTableBody = document.querySelector('#productionTable tbody');
+                    productionTableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                 });
             }
         };
         
         // 处理API响应数据
-        function processApiResponse(json) {
+        function processApiResponse(json, customStartTs = null, customEndTs = null) {
             console.log('API response data:', json);
             console.log('Data type:', typeof json);
             
@@ -646,6 +784,9 @@
                 console.log('No data returned from API');
                 // 清空停机表格
                 updateDowntimeTable([]);
+                // 清空产量统计表格
+                const productionTableBody = document.querySelector('#productionTable tbody');
+                productionTableBody.innerHTML = '<tr><td colspan="2" style="border: 1px solid #ddd; padding: 8px; text-align: center;">暂无数据</td></tr>';
                 return;
             }
             
@@ -702,6 +843,11 @@
             chart.update();
             
             calculateDowntime(UAUTC, SXSRS, MATXT);
+            
+            // 计算产量并更新产量统计表格
+            const productionByFlavor = calculateProduction(SXSRS, MATXT);
+            const mode = detectMode(customStartTs, customEndTs);
+            updateProductionTable(productionByFlavor, mode);
             
             console.log('Chart updated successfully with real API data');
         }
