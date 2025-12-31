@@ -537,6 +537,30 @@
             console.log('Start time:', new Date(start_ts * 1000).toLocaleString());
             console.log('End time:', new Date(end_ts * 1000).toLocaleString());
             
+            // 检查是否使用默认的24小时时间范围
+            if (!customStartTs && !customEndTs) {
+                console.log('Using default 24h time range, updating quick select buttons');
+                
+                // 重置所有快速选择按钮样式
+                const allQuickBtns = document.querySelectorAll('.quickSelectBtn');
+                allQuickBtns.forEach(btn => {
+                    btn.style.backgroundColor = '#f0f0f0';
+                    btn.style.color = '#000000';
+                    btn.style.border = '1px solid #ccc';
+                    btn.classList.remove('active');
+                });
+                
+                // 激活'最近24小时'按钮
+                const last24hBtn = document.querySelector('.quickSelectBtn[data-type="24h"]');
+                if (last24hBtn) {
+                    last24hBtn.style.backgroundColor = '#0078D4';
+                    last24hBtn.style.color = '#ffffff';
+                    last24hBtn.style.border = '1px solid #0078D4';
+                    last24hBtn.classList.add('active');
+                    console.log('Activated "最近24小时" button');
+                }
+            }
+            
             // 使用代理服务器请求真实API数据，解决CORS问题
             // 优先尝试使用uniCloud云函数（如果可用），否则使用本地代理服务器
             const useUniCloud = false; // 设置为true以使用uniCloud云函数
