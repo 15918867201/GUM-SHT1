@@ -462,35 +462,88 @@
             },
         });
 
-        // 统计停机时间函数
+        // 统计停机时间函数 - 按班次分割停机时间
         function calculateDowntime(times, speeds, flavors) {
             const downtimeList = [];
             let downtimeStart = null;
             let downtimeFlavor = null;
             
+            // 班次边界时间点（小时）
+            const shiftBoundaries = [0, 8, 16, 24];
+            
+            // 获取下一个班次边界时间
+            function getNextShiftBoundary(date) {
+                const hour = date.getHours();
+                for (let i = 0; i < shiftBoundaries.length - 1; i++) {
+                    if (hour >= shiftBoundaries[i] && hour < shiftBoundaries[i + 1]) {
+                        const nextBoundary = new Date(date);
+                        nextBoundary.setHours(shiftBoundaries[i + 1], 0, 0, 0);
+                        return nextBoundary;
+                    }
+                }
+                return null;
+            }
+            
+            // 添加停机记录到列表
+            function addDowntimeRecord(start, end, flavor) {
+                if (start && end && start < end) {
+                    downtimeList.push({
+                        start: start,
+                        end: end,
+                        flavor: flavor
+                    });
+                }
+            }
+            
             for (let i = 0; i < speeds.length; i++) {
                 if (speeds[i] === 0 && downtimeStart === null) {
-                    downtimeStart = times[i];
+                    // 停机开始
+                    downtimeStart = new Date(times[i]);
                     downtimeFlavor = flavors[i] || 'Unknown';
                 } else if (speeds[i] !== 0 && downtimeStart !== null) {
-                    const downtimeEnd = times[i];
-                    downtimeList.push({
-                        start: downtimeStart,
-                        end: downtimeEnd,
-                        flavor: downtimeFlavor
-                    });
+                    // 停机结束
+                    const downtimeEnd = new Date(times[i]);
+                    
+                    // 检查停机是否跨越班次边界
+                    let currentStart = new Date(downtimeStart);
+                    let currentEnd = new Date(downtimeEnd);
+                    
+                    while (currentStart < currentEnd) {
+                        const nextBoundary = getNextShiftBoundary(currentStart);
+                        
+                        if (nextBoundary && nextBoundary < currentEnd) {
+                            // 停机跨越班次边界，分割为两个记录
+                            addDowntimeRecord(currentStart, nextBoundary, downtimeFlavor);
+                            currentStart = new Date(nextBoundary);
+                        } else {
+                            // 停机在当前班次内结束
+                            addDowntimeRecord(currentStart, currentEnd, downtimeFlavor);
+                            break;
+                        }
+                    }
+                    
                     downtimeStart = null;
                     downtimeFlavor = null;
                 }
             }
             
+            // 处理数据结束时仍在停机状态的情况
             if (downtimeStart !== null) {
-                const downtimeEnd = times[times.length - 1];
-                downtimeList.push({
-                    start: downtimeStart,
-                    end: downtimeEnd,
-                    flavor: downtimeFlavor
-                });
+                const lastTime = new Date(times[times.length - 1]);
+                let currentStart = new Date(downtimeStart);
+                
+                // 将停机时间分割到对应的班次中，直到最后一个数据点
+                while (currentStart < lastTime) {
+                    const nextBoundary = getNextShiftBoundary(currentStart);
+                    
+                    if (nextBoundary && nextBoundary <= lastTime) {
+                        addDowntimeRecord(currentStart, nextBoundary, downtimeFlavor);
+                        currentStart = new Date(nextBoundary);
+                    } else {
+                        addDowntimeRecord(currentStart, lastTime, downtimeFlavor);
+                        break;
+                    }
+                }
             }
             
             updateDowntimeTable(downtimeList);
