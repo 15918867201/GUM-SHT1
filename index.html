@@ -612,19 +612,30 @@
                 }
             }
             
-            // 计算停机次数和停机时间
+            // 计算停机次数和停机时间 - 按班次分割停机时间
             let downtimeStart = null;
             let downtimeFlavor = null;
             
-            for (let i = 0; i < speeds.length; i++) {
-                const speed = speeds[i];
-                const flavor = flavors[i] || 'Unknown';
-                const time = times[i];
-                
-                // 确定日期和班次
-                const dateObj = new Date(time);
-                const date = dateObj.toLocaleDateString('zh-CN');
-                const hour = dateObj.getHours();
+            // 班次边界时间点（小时）
+            const shiftBoundaries = [0, 8, 16, 24];
+            
+            // 获取下一个班次边界时间
+            function getNextShiftBoundary(date) {
+                const hour = date.getHours();
+                for (let i = 0; i < shiftBoundaries.length - 1; i++) {
+                    if (hour >= shiftBoundaries[i] && hour < shiftBoundaries[i + 1]) {
+                        const nextBoundary = new Date(date);
+                        nextBoundary.setHours(shiftBoundaries[i + 1], 0, 0, 0);
+                        return nextBoundary;
+                    }
+                }
+                return null;
+            }
+            
+            // 获取日期和班次
+            function getDateAndShift(date) {
+                const dateStr = date.toLocaleDateString('zh-CN');
+                const hour = date.getHours();
                 let shift = '';
                 if (hour >= 0 && hour < 8) {
                     shift = '晚班';
@@ -633,6 +644,47 @@
                 } else {
                     shift = '中班';
                 }
+                return { date: dateStr, shift: shift };
+            }
+            
+            // 累加停机时间到对应的班次
+            function addDowntimeTime(startTime, endTime, flavor) {
+                let currentStart = new Date(startTime);
+                let currentEnd = new Date(endTime);
+                
+                while (currentStart < currentEnd) {
+                    const nextBoundary = getNextShiftBoundary(currentStart);
+                    
+                    if (nextBoundary && nextBoundary < currentEnd) {
+                        // 停机跨越班次边界，分割为多个记录
+                        const { date, shift } = getDateAndShift(currentStart);
+                        const duration = (nextBoundary - currentStart) / (1000 * 60);
+                        
+                        if (productionByDate[date] && productionByDate[date][shift] && productionByDate[date][shift][flavor]) {
+                            productionByDate[date][shift][flavor].downtimeCount += 1;
+                            productionByDate[date][shift][flavor].downtimeTime += duration;
+                        }
+                        
+                        currentStart = new Date(nextBoundary);
+                    } else {
+                        // 停机在当前班次内结束
+                        const { date, shift } = getDateAndShift(currentStart);
+                        const duration = (currentEnd - currentStart) / (1000 * 60);
+                        
+                        if (productionByDate[date] && productionByDate[date][shift] && productionByDate[date][shift][flavor]) {
+                            productionByDate[date][shift][flavor].downtimeCount += 1;
+                            productionByDate[date][shift][flavor].downtimeTime += duration;
+                        }
+                        
+                        break;
+                    }
+                }
+            }
+            
+            for (let i = 0; i < speeds.length; i++) {
+                const speed = speeds[i];
+                const flavor = flavors[i] || 'Unknown';
+                const time = times[i];
                 
                 // 检测停机开始
                 if (speed === 0 && downtimeStart === null) {
@@ -642,14 +694,7 @@
                 // 检测停机结束
                 else if (speed !== 0 && downtimeStart !== null) {
                     const downtimeEnd = time;
-                    const downtimeDuration = (new Date(downtimeEnd) - new Date(downtimeStart)) / (1000 * 60);
-                    
-                    // 累加停机次数和停机时间
-                    if (productionByDate[date] && productionByDate[date][shift] && productionByDate[date][shift][downtimeFlavor]) {
-                        productionByDate[date][shift][downtimeFlavor].downtimeCount += 1;
-                        productionByDate[date][shift][downtimeFlavor].downtimeTime += downtimeDuration;
-                    }
-                    
+                    addDowntimeTime(downtimeStart, downtimeEnd, downtimeFlavor);
                     downtimeStart = null;
                     downtimeFlavor = null;
                 }
@@ -658,23 +703,7 @@
             // 处理最后一个停机事件
             if (downtimeStart !== null) {
                 const downtimeEnd = times[times.length - 1];
-                const downtimeDuration = (new Date(downtimeEnd) - new Date(downtimeStart)) / (1000 * 60);
-                const dateObj = new Date(downtimeStart);
-                const date = dateObj.toLocaleDateString('zh-CN');
-                const hour = dateObj.getHours();
-                let shift = '';
-                if (hour >= 0 && hour < 8) {
-                    shift = '晚班';
-                } else if (hour >= 8 && hour < 16) {
-                    shift = '早班';
-                } else {
-                    shift = '中班';
-                }
-                
-                if (productionByDate[date] && productionByDate[date][shift] && productionByDate[date][shift][downtimeFlavor]) {
-                    productionByDate[date][shift][downtimeFlavor].downtimeCount += 1;
-                    productionByDate[date][shift][downtimeFlavor].downtimeTime += downtimeDuration;
-                }
+                addDowntimeTime(downtimeStart, downtimeEnd, downtimeFlavor);
             }
             
             return productionByDate;
