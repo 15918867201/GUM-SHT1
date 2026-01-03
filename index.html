@@ -216,11 +216,7 @@
                     startDate.setHours(0, 0, 0, 0);
                     endDate.setHours(8, 0, 0, 0);
                     
-                    // 如果当前时间已经过了晚班时间，则选择昨天的晚班
-                    if (currentHour >= 8) {
-                        startDate.setDate(startDate.getDate() - 1);
-                        endDate.setDate(endDate.getDate() - 1);
-                    }
+                    // 晚班总是选择今天的晚班
                 } else if (shift === '早班') {
                     // 早班：8:00-16:00
                     startDate.setHours(8, 0, 0, 0);
@@ -237,6 +233,7 @@
                     startDate.setHours(16, 0, 0, 0);
                     endDate.setHours(23, 59, 59, 999);
                     
+                    // 如果当前时间已经过了中班时间，则选择今天的中班
                     // 如果当前时间还没到中班时间，则选择昨天的中班
                     if (currentHour < 16) {
                         startDate.setDate(startDate.getDate() - 1);
